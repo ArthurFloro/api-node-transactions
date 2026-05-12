@@ -51,7 +51,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
   )
 
   app.get(
-    '/sumary',
+    '/summary',
     {
       preHandler: [checkSessionIdExist],
     },
