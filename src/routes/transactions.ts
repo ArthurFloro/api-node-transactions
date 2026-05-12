@@ -14,7 +14,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
       const { sessionId } = request.cookies
 
       const transactions = await setupKnex('transactions')
-        .where('sessionId', sessionId)
+        .where('session_id', sessionId)
         .select('*')
 
       return {
@@ -59,7 +59,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
       const { sessionId } = request.cookies
 
       const summary = await setupKnex('transactions')
-        .where('sessionId', sessionId)
+        .where('session_id', sessionId)
         .sum('amount', {
           as: 'amount',
         })
@@ -69,35 +69,36 @@ export async function transactionsRoutes(app: FastifyInstance) {
     },
   )
 
-  app.post('/', async (request, reply) => {
-    const createTransactionBodySchema = z.object({
-      title: z.string(),
-      amount: z.number(),
-      type: z.enum(['credit', 'debit']),
-    })
-
-    const { title, amount, type } = createTransactionBodySchema.parse(
-      request.body,
-    ) // valida os dados e confirma se os dados estão vindo no valor correto
-
-    let sessionId = request.cookies.sessionId
-
-    if (!sessionId) {
-      sessionId = crypto.randomUUID()
-
-      reply.cookie('sessionId', sessionId, {
-        path: '/',
-        maxAge: 60 * 60 * 24 * 7, // cookie expira em 7 dias
+  app.post('/',
+    async (request, reply) => {
+      const createTransactionBodySchema = z.object({
+        title: z.string(),
+        amount: z.number(),
+        type: z.enum(['credit', 'debit']),
       })
-    }
 
-    await setupKnex('transactions').insert({
-      id: crypto.randomUUID(),
-      title,
-      amount: type === 'credit' ? amount : amount * -1,
-      sessionId,
+      const { title, amount, type } = createTransactionBodySchema.parse(
+        request.body,
+      ) // valida os dados e confirma se os dados estão vindo no valor correto
+
+      let sessionId = request.cookies.sessionId
+
+      if (!sessionId) {
+        sessionId = crypto.randomUUID()
+
+        reply.cookie('sessionId', sessionId, {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 7, // cookie expira em 7 dias
+        })
+      }
+
+      await setupKnex('transactions').insert({
+        id: crypto.randomUUID(),
+        title,
+        amount: type === 'credit' ? amount : amount * -1,
+        session_id: sessionId,
+      })
+
+      return reply.status(201).send()
     })
-
-    return reply.status(201).send()
-  })
 }
